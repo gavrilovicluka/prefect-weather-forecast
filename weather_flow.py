@@ -14,21 +14,17 @@ def get_location_coordinates(location_name: str):
     locations_block = JSON.load("location-coordinates")
     coordinates_data = locations_block.value
 
-    if location_name in coordinates_data:
-        return coordinates_data[location_name]
-    else:
+    if location_name not in coordinates_data:
         geolocator = Nominatim(user_agent="WeatherForecastApp")
         location = geolocator.geocode(location_name)
-
         if location:
             coordinates_data[location_name] = (location.latitude, location.longitude)
-
             locations_block.value = coordinates_data
             locations_block.save(name="location-coordinates", overwrite=True)
-
-            return (location.latitude, location.longitude)
         else:
-            raise Exception(f"Location '{location_name}' not found.")
+            raise ValueError(f"Location '{location_name}' not found.")
+
+    return coordinates_data[location_name]
 
 
 @task
@@ -42,18 +38,25 @@ def create_url(coordinates: tuple):
 
 @task(retries=3)
 def fetch_data(url: str):
-    headers = {
-        "User-Agent": "WeatherForecastApp/1.0"
-    }
+    try:
+        headers = {"User-Agent": "WeatherForecastApp/1.0"}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"API request failed: {e}") 
 
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        raise Exception(f"Failed to fetch data: {response.status_code}")
 
+def extract_weather_details(datetime, data_point):
+    return {
+            "datetime": datetime,
+            "air_pressure_at_sea_level": data_point["air_pressure_at_sea_level"],
+            "air_temperature": data_point["air_temperature"],
+            "cloud_area_fraction": data_point["cloud_area_fraction"],
+            "relative_humidity": data_point["relative_humidity"],
+            "wind_from_direction": data_point["wind_from_direction"],
+            "wind_speed": data_point["wind_speed"]
+        }
 
 @task
 def process_data(data, is_current_measurement: bool):
@@ -63,15 +66,8 @@ def process_data(data, is_current_measurement: bool):
 
         utc_datetime = data["properties"]["meta"]["updated_at"]
         local_datetime = convert_utc_to_local_time(utc_datetime)
-        return {
-            "datetime": local_datetime,
-            "air_pressure_at_sea_level": data_instant_details["air_pressure_at_sea_level"],
-            "air_temperature": data_instant_details["air_temperature"],
-            "cloud_area_fraction": data_instant_details["cloud_area_fraction"],
-            "relative_humidity": data_instant_details["relative_humidity"],
-            "wind_from_direction": data_instant_details["wind_from_direction"],
-            "wind_speed": data_instant_details["wind_speed"]
-        }
+
+        return extract_weather_details(local_datetime, data_instant_details)
     
     else:
         predictions_data = []
@@ -79,15 +75,7 @@ def process_data(data, is_current_measurement: bool):
             prediction_time = convert_utc_to_local_time(prediction["time"])
             prediction_details = prediction["data"]["instant"]["details"]
 
-            predictions_data.append({
-                "datetime": prediction_time,
-                "air_pressure_at_sea_level": prediction_details["air_pressure_at_sea_level"],
-                "air_temperature": prediction_details["air_temperature"],
-                "cloud_area_fraction": prediction_details["cloud_area_fraction"],
-                "relative_humidity": prediction_details["relative_humidity"],
-                "wind_from_direction": prediction_details["wind_from_direction"],
-                "wind_speed": prediction_details["wind_speed"]
-            })
+            predictions_data.append(extract_weather_details(prediction_time, prediction_details))
 
         return predictions_data
         
