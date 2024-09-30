@@ -5,6 +5,7 @@ from geopy.geocoders import Nominatim
 from prefect.blocks.system import JSON
 from db_tasks.measurements_table_tasks import insert_measurements_data, setup_measurements_table
 from db_tasks.predictions_table_tasks import insert_predictions_data, setup_predictions_table
+from utils.extract_weather_data import extract_weather_details
 from utils.time_utils import convert_utc_to_local_time
 from prefect.tasks import task_input_hash
 
@@ -47,17 +48,6 @@ def fetch_data(url: str):
     except requests.exceptions.RequestException as e:
         raise ValueError(f"API request failed: {e}") 
 
-
-def extract_weather_details(datetime, data_point):
-    return {
-            "datetime": datetime,
-            "air_pressure_at_sea_level": data_point["air_pressure_at_sea_level"],
-            "air_temperature": data_point["air_temperature"],
-            "cloud_area_fraction": data_point["cloud_area_fraction"],
-            "relative_humidity": data_point["relative_humidity"],
-            "wind_from_direction": data_point["wind_from_direction"],
-            "wind_speed": data_point["wind_speed"]
-        }
 
 @task
 def process_data(data, is_current_measurement: bool):
