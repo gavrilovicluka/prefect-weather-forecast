@@ -17,7 +17,7 @@ def get_location_coordinates(location_name: str):
     if location_name in coordinates_data:
         return coordinates_data[location_name]
     else:
-        geolocator = Nominatim(user_agent="MyApp")
+        geolocator = Nominatim(user_agent="WeatherForecastApp")
         location = geolocator.geocode(location_name)
 
         if location:
@@ -43,7 +43,7 @@ def create_url(coordinates: tuple):
 @task(retries=3)
 def fetch_data(url: str):
     headers = {
-        "User-Agent": "MyApp/1.0 (myemail@example.com)"
+        "User-Agent": "WeatherForecastApp/1.0"
     }
 
     response = requests.get(url, headers=headers)

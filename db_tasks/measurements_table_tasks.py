@@ -3,7 +3,7 @@ from prefect_sqlalchemy import SqlAlchemyConnector
 
 table_name = "yrno_measurements"
 
-@task
+@task(retries=3)
 def setup_measurements_table(block_name: str="postgres-connection-block"):
     with SqlAlchemyConnector.load(block_name) as connector:
 
@@ -22,7 +22,7 @@ def setup_measurements_table(block_name: str="postgres-connection-block"):
                     """)
 
 
-@task
+@task(retries=3)
 def insert_measurements_data(location: str, processed_data: dict, block_name: str="postgres-connection-block") -> int:
 
     with SqlAlchemyConnector.load(block_name) as connector:\
