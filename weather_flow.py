@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from prefect import flow, task
 import requests
 from geopy.geocoders import Nominatim
@@ -6,9 +6,10 @@ from prefect.blocks.system import JSON
 from db_tasks.measurements_table_tasks import insert_measurements_data, setup_measurements_table
 from db_tasks.predictions_table_tasks import insert_predictions_data, setup_predictions_table
 from utils.time_utils import convert_utc_to_local_time
-from prefect.server.schemas.schedules import IntervalSchedule
+from prefect.tasks import task_input_hash
 
-@task(retries=3)
+
+@task(retries=3, cache_key_fn=task_input_hash, cache_expiration=timedelta(days=1))
 def get_location_coordinates(location_name: str):
 
     locations_block = JSON.load("location-coordinates")
