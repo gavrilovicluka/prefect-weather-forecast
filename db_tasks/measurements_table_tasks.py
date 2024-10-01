@@ -62,5 +62,4 @@ def insert_measurements_data(location: str, processed_data: dict, block_name: st
         })
 
         measurement_id = result.fetchone()[0]
-        print("--------------------------", measurement_id)
         return measurement_id

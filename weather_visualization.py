@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 
 from weather_flow import get_weather
 
@@ -27,9 +26,15 @@ def main():
 
         if predictions:
             show_predictions = st.expander(label = 'Predictions')
+            df_predictions = pd.DataFrame(predictions)
             with show_predictions:
-                df_predictions = pd.DataFrame(predictions)
                 st.dataframe(df_predictions)
+            
+            st.bar_chart(
+                df_predictions,
+                x="datetime",
+                y="air_temperature"
+           )
         else:
             st.error("Failed to fetch predictions data.")   
     
